@@ -51,30 +51,15 @@ class Music(commands.Cog):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         await player.play(ctx, messages)
 
-    #REWORK
     @commands.command()
     async def repeat(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
-        filename, music = player.nowplaying_music
-        if os.path.isfile(filename) is False:
-            await player.dlmusic_one(ctx, music.url)
+        if player is None:
+            return await ctx.send("not playing anything")
+        if player.nowplaying is None:
+            return await ctx.send("not playing anything")
         
-        volume = player.volume / 100
-        source = discord.FFmpegPCMAudio(filename)
-        source = discord.PCMVolumeTransformer(source, volume=volume)
-        
-        def after(error):
-            source.cleanup()
-            if error is not None:
-                coro = ctx.send(error)
-                asyncio.run_coroutine_threadsafe(coro, self.__bot.loop)
-            coro = player.playNext
-            asyncio.run_coroutine_threadsafe(coro, self.__bot.loop)
-            
-        voice_client = ctx.voice_client
-        voice_client.stop()
-        player.nowplaying_start_time = datetime.datetime.now()
-        voice_client.play(source, after=after)
+        await player.repeat(ctx)
         return await ctx.send("repeated")
 
     @commands.command()
@@ -84,10 +69,7 @@ class Music(commands.Cog):
             return await ctx.send("not playing anything")
         if len(player.history) == 0:
             return await ctx.send("playing history is empty")
-        player.queue.insert(0, player.nowplaying_music)
-        player.queue.insert(0, player.history.pop(0))
-        await self.skip(ctx, False)
-        player.history.pop(0)
+        player.previous(ctx)
         return await ctx.send("playing previous")
     
     @commands.command()
@@ -127,15 +109,15 @@ class Music(commands.Cog):
         await ctx.send("stopped, cleared queue")
     
     @commands.command()
-    async def skip(self, ctx, msg = True):
+    async def skip(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
-            if msg: return await ctx.send("not playing anything")
+            return await ctx.send("not playing anything")
         if player.nowplaying_music is None:
-            if msg: return await ctx.send("not playing anything")
+            return await ctx.send("not playing anything")
         voice_client = ctx.voice_client
         voice_client.stop()
-        if msg: return await ctx.send("skipped")
+        return await ctx.send("skipped")
     
     @commands.command()
     async def queue(self, ctx):

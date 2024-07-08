@@ -33,23 +33,24 @@ class GuildPlayer():
         self._addingToQueue = False
         self.history = []
         
-        self.nowplaying_music: MusicDatabase = None
+        self.nowplaying_music = None #(str, MusicDatabase)
         self.nowplaying_start_time = None
         
-        self.__timeout_start_time = None
-        
         self.volume = 50
+        
+        self.__timeout_start_time = None
     
-    async def addToQueue(self, music: MusicDatabase):
+    async def addToQueue(self, music: MusicDatabase, pos = -1):
         video_id = music.id
         video_title = music.title
         
         while True:
             if self._addingToQueue is False:
                 self._addingToQueue = True
-                self.queue.append(
+                self.queue.insert(
+                    pos,
                     (
-                    rf"music\{self.__guild.id}\{video_id}_{video_title}.webm",
+                    rf"music\{self.__guild.id}\{video_id}_{video_title}.mp3",
                     music
                     )
                 )
@@ -64,7 +65,13 @@ class GuildPlayer():
             "format": 'bestaudio',
             "extract_audio": True,
             "quiet": True,
-            "ignoreerrors": True
+            "ignoreerrors": True,
+            'postprocessors': [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3'
+                }
+            ],
         }
         def func():
             with yt_dlp.YoutubeDL(video_opt) as ydl:
@@ -100,10 +107,11 @@ class GuildPlayer():
                 else:
                     delta = (datetime.datetime.now() - self.__timeout_start_time).total_seconds()
                     if delta > 300:
-                        await ctx.voice_client.disconnect()
-                        await ctx.send("Timeout (idle over 5 mins)")
+                        if ctx.voice_client is not None:
+                            await ctx.voice_client.disconnect()
+                            await ctx.send("Timeout (idle over 5 mins)")
                         del self
-                        break
+                        return
                 await asyncio.sleep(1)
                 continue
             
@@ -170,3 +178,14 @@ class GuildPlayer():
     {delta} / {duration}
         """
         return output
+    
+    async def repeat(self, ctx):
+        _, music = self.nowplaying_music
+        await self.addToQueue(music, 0)
+        ctx.voice_client.stop()
+
+    async def previous(self, ctx):
+        self.queue.insert(0, self.nowplaying_music)
+        self.queue.insert(0, self.history.pop(0))
+        ctx.voice_client.stop()
+        self.history.pop(0)
