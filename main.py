@@ -37,7 +37,7 @@ class MyBot(commands.Bot):
 
 
 def main():
-    config = Config("bbk")
+    config = Config("comet")
     prefix = config.prefix
     token = config.token
     
