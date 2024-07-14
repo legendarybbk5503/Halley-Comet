@@ -49,7 +49,7 @@ def main():
         command_prefix = prefix,
         intents = intents
     )
-    bot.run(token,  log_level=logging.INFO, root_logger=True)
+    bot.run(token, log_level=logging.INFO, root_logger=True)
 
 if __name__ == "__main__":
     main()
