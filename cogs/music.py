@@ -149,7 +149,7 @@ class Music(commands.Cog):
         if num.isdigit():
             if int(num) in range(1, len(queue)+1):
                 music = queue.pop(int(num)-1)[1]
-                return await ctx.send(f"removed {music.title}")
+                return await ctx.send(f"removed `{music.title}`")
             else:
                 return await ctx.send("invalid no.")
         else:

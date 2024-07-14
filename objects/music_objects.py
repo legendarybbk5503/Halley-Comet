@@ -3,7 +3,7 @@ import asyncio
 import os
 import discord
 import yt_dlp
-from async_timeout import timeout
+#from async_timeout import timeout
 
 from tools.datetime_formatting import DatetimeFormatting as DF
 from tools.youtube_url_check import Check
