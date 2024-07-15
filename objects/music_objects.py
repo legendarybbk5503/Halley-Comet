@@ -65,6 +65,8 @@ class GuildPlayer():
             "extract_audio": True,
             "quiet": True,
             "ignoreerrors": True,
+            'noprogress': True,
+            'no_warnings': True,
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -74,7 +76,9 @@ class GuildPlayer():
         }
         def func():
             with yt_dlp.YoutubeDL(video_opt) as ydl:
-                info = ydl.extract_info(url, download = True)
+                info = ydl.extract_info(url, download = False)
+                if os.path.isfile(rf"music\{self.__guild.id}\{info["id"]}_{info["title"]}.mp3") is not True:
+                    ydl.download(url)
                 music = MusicDatabase(url, info)
                 return music
         music = await asyncio.to_thread(func)
@@ -143,7 +147,7 @@ class GuildPlayer():
             message = "".join(messages)
             if Check().is_watch_url(message):
                 url = message
-                music = await self.dlmusic_one(ctx, url)
+                music = await self.dlmusic_one(url)
                 await ctx.send(await self.addToQueue(music))
             elif Check().is_playlist_url(message):
                 urls = Playlist(message)

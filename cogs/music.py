@@ -185,7 +185,7 @@ class Music(commands.Cog):
         if np is None:
             return await ctx.send("not playing anything")
         else:
-            return await ctx.send(msg)
+            return await ctx.send(np)
         
     @commands.command()
     async def volume(self, ctx, *args):
@@ -204,6 +204,14 @@ class Music(commands.Cog):
                     return await ctx.send(f"volume has to be an integer between 0 and 100 inclusively")
             else:
                 return await ctx.send(f"volume has to be an integer between 0 and 100 inclusively")
+    
+    @commands.command()
+    async def save(self, ctx):
+        player: GuildPlayer = self.__players[ctx.guild.id]
+        np = player.nowplaying_music[1].url
+        queue = [x[1].url for x in player.queue]
+        urls = queue.insert(0, np)
+        print(urls)
     
 async def setup(bot):
     await bot.add_cog(Music(bot))
