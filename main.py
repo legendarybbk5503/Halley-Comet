@@ -32,8 +32,6 @@ class MyBot(commands.Bot):
 
         await Auto(self).removeInactiveAudio()
     
-    async def on_ready(self):        
-        print(f"we have logged in as {self.user}")
 
 
 def main():
