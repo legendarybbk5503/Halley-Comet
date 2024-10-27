@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import os
 from objects.music_objects import GuildPlayer, MusicDatabase
+import json
 
 class Music(commands.Cog):
     
@@ -189,7 +190,9 @@ class Music(commands.Cog):
         
     @commands.command()
     async def volume(self, ctx, *args):
-        player: GuildPlayer = self.__players[ctx.guild.id]
+        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+        if player is None:
+            return await ctx.send("not playing anything")
         volume = player.volume
         if args == ():
             return await ctx.send(f"volume: `{volume}%`")
@@ -206,12 +209,72 @@ class Music(commands.Cog):
                 return await ctx.send(f"volume has to be an integer between 0 and 100 inclusively")
     
     @commands.command()
-    async def save(self, ctx):
-        player: GuildPlayer = self.__players[ctx.guild.id]
-        np = player.nowplaying_music[1].url
-        queue = [x[1].url for x in player.queue]
-        urls = queue.insert(0, np)
-        print(urls)
+    async def save(self, ctx, playlistname = None):
+        name = playlistname
+        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+        if player is None:
+            return await ctx.send("not playing anything")
+        if name is None:
+            return await ctx.send("please provide a name for the playlist")
+        #get urls from np + queue
+        np = player.nowplaying_music[1]
+        np = (np.title, np.url)
+        if len(player.queue) > 0:
+            queue = [(x[1].title, x[1].url) for x in player.queue]
+            queue.insert(0, np)
+            urls = queue
+        else:
+            urls = [np]
+        
+        #read file
+        try:
+            with open(f"playlist\{ctx.author.id}.json", 'r') as f:
+                d = json.load(f)
+        except:
+            d = {}
+        
+        #return if exists
+        if name in d.keys():
+            return await ctx.send(f"playlist {name} already exists")
+        
+        #else create playlist
+        with open(f"playlist\{ctx.author.id}.json", 'w+') as f:
+            d[name] = urls
+            json.dump(d, f, indent=4)
+            return await ctx.send(f"saved playlist as {name}")
+        
+    @commands.command()
+    async def playlist(self, ctx, playlistname = None):
+        """
+        add the playlist to queue if specified
+        list all playlists if playlistname is None
+        """
+        with open(f"playlist\{ctx.author.id}.json", 'r') as f:
+            d = json.load(f)
+        
+        name = playlistname
+        if name is None:
+            output = []
+            for name, musics in d.items(): #music = (title, url)
+                titles = [f"    {i}: {music[0]}" for i, music in enumerate(musics, start=1)]
+                output.append(f"{name}:\n{"\n".join(titles)}")
+            return await ctx.send("\n".join(output))
+        #else
+        if name not in d.keys():
+            return await ctx.send(f"cannot find the playlist `{name}`")
+        #else
+        urls = [x[1] for x in d[name]]
+        if await self.__userInVoiceChannel(ctx) is False: return
+        if await self.__botInVoiceChannel(ctx, False) is False:
+            await self.join(ctx)
+        
+        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+        await player.dlmusic_many(ctx, urls)
+        await ctx.send(f"added playlist `{name}` into queue")
+        
+        if player.nowplaying_music is None:
+            await player.playerLoop(ctx)
+        
     
 async def setup(bot):
     await bot.add_cog(Music(bot))

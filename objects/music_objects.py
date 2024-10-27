@@ -85,6 +85,9 @@ class GuildPlayer():
         return music
     
     async def dlmusic_many(self, ctx, urls: list[str]) -> list[MusicDatabase]:
+        """
+            including add to queue
+        """
         async with ctx.typing():
             message = await ctx.send(f"adding playlist")
             
