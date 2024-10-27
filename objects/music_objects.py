@@ -176,7 +176,7 @@ class GuildPlayer():
         delta = DF().format_time(delta)
         duration = DF().format_time(duration)
         output = f"""
-        Nowplaying:
+        Now playing:
     `{music.title}`
     {delta} / {duration}
         """

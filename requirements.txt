@@ -1,0 +1,6 @@
+discord.py
+yt-dlp
+PyNaCl
+ffmpeg
+ffprobe
+youtube-search-python
