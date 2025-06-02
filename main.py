@@ -33,7 +33,9 @@ class MyBot(commands.Bot):
         await Auto(self).removeInactiveAudio()
     
     async def on_ready(self):        
-        print(f"we have logged in as {self.user}")
+        slash = await self.tree.sync()
+        print(f"Bot Name: {self.user}")
+        print(f"Loaded {len(slash)} slash commands")
 
 def main():
     config = Config("comet")

@@ -14,7 +14,6 @@ class MusicDatabase():
     
     def __init__(self, url: str, info: dict):
         self.url = url
-        
         self.id = info.get("id", None)
         self.title = info.get("title", None)
         self.duration = info.get("duration", None)
@@ -60,7 +59,7 @@ class GuildPlayer():
 
     async def dlmusic_one(self, url: str) -> MusicDatabase:
         video_opt = {
-            "outtmpl": rf"\music\{self.__guild.id}\%(display_id)s_%(title)s.%(ext)s",
+            "outtmpl": f"music/{self.__guild.id}/%(display_id)s_%(title)s.%(ext)s",
             "format": 'bestaudio',
             "extract_audio": True,
             "quiet": True,
@@ -78,6 +77,7 @@ class GuildPlayer():
             with yt_dlp.YoutubeDL(video_opt) as ydl:
                 info = ydl.extract_info(url, download = False)
                 if os.path.isfile(rf"music\{self.__guild.id}\{info["id"]}_{info["title"]}.mp3") is not True:
+                    print(f"downloading {info['title']}")
                     ydl.download(url)
                 music = MusicDatabase(url, info)
                 return music
@@ -94,10 +94,10 @@ class GuildPlayer():
             async def func(url):
                 music = await self.dlmusic_one(url)
                 await self.addToQueue(music)
-            
+
             coros = [func(url) for url in urls]
             await asyncio.gather(*coros)
-            
+            print(f"finished adding {len(urls)} songs")
             await message.edit(content=f"finished adding")
     
     async def playerLoop(self, ctx):
@@ -133,6 +133,7 @@ class GuildPlayer():
             
             def after(error):
                 source.cleanup()
+                self.__timeout_start_time = datetime.datetime.now()
                 if error is not None:
                     coro = ctx.send(error)
                     asyncio.run_coroutine_threadsafe(coro, self.__bot.loop)
@@ -154,10 +155,13 @@ class GuildPlayer():
                 await ctx.send(await self.addToQueue(music))
             elif Check().is_playlist_url(message):
                 urls = Playlist(message)
-                await self.dlmusic_many(ctx, urls)
-                #added all to queue inside dlmusic_many() to prevent getting banned from "spamming msg"
+                print(urls)
+                ctx.send("Playlist function is not implemented yet")
             else: #not url
                 url = await self.__search(message)
+                if url is None:
+                    await ctx.send("No result found")
+                    return
                 music = await self.dlmusic_one(url)
                 await ctx.send(await self.addToQueue(music))
         
@@ -167,6 +171,9 @@ class GuildPlayer():
     async def __search(self, message: str) -> str:
         videosSearch = VideosSearch(message, limit = 1)
         url = videosSearch.result()['result'][0]['link']
+        print(url)
+        if url is None:
+            return None
         return url
 
     async def nowplaying(self):

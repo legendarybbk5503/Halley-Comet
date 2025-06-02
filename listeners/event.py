@@ -8,14 +8,6 @@ class Event(commands.Cog):
         self.__bot = bot
         self.hack_dict = {}
         self.hack_message = []
-        
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author == self.__bot.user:
-            return
-        if message.content.startswith("hello"):
-            await message.channel.send("world")
     
     async def deletemessage(self,author):
         for msg in self.hack_message:

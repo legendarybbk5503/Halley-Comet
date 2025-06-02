@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import asyncio
 import datetime
 import os
 from objects.music_objects import GuildPlayer, MusicDatabase
 import json
+
 
 class Music(commands.Cog):
     
@@ -28,7 +30,7 @@ class Music(commands.Cog):
             return False
         return True
     
-    @commands.command()
+    @commands.hybrid_command(name = "join", description = "Call the bot to join your voice channel")
     async def join(self, ctx):
         if await self.__userInVoiceChannel(ctx) is False: return
         await ctx.author.voice.channel.connect()
@@ -37,22 +39,25 @@ class Music(commands.Cog):
         if self.__players.get(ctx.guild.id, None) is None:
             self.__players[ctx.guild.id] = GuildPlayer(ctx)
     
-    @commands.command()
+    @commands.hybrid_command(name = "leave", description = "Call the bot to leave your voice channel")
     async def leave(self, ctx):
         if await self.__botInVoiceChannel(ctx) is False: return
         await ctx.voice_client.disconnect()
         await ctx.send("Left your voice channel")
     
-    @commands.command()
-    async def play(self, ctx, *messages: str): ##enable space in command        
-        if await self.__userInVoiceChannel(ctx) is False: return
+    @commands.hybrid_command(name = "play", description = "Play a song with the given url or search term")
+    @app_commands.describe(messages = "The url or search term of the song")
+    async def play(self, ctx, messages: str): ##enable space in command        
+        if await self.__userInVoiceChannel(ctx) is False: 
+            return
         if await self.__botInVoiceChannel(ctx, False) is False:
             await self.join(ctx)
         
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         await player.play(ctx, messages)
 
-    @commands.command()
+
+    @commands.hybrid_command(name = "repeat", description = "Repeat the current song")
     async def repeat(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
@@ -63,17 +68,17 @@ class Music(commands.Cog):
         await player.repeat(ctx)
         return await ctx.send("repeated")
 
-    @commands.command()
-    async def previous(self, ctx):
-        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
-        if player is None:
-            return await ctx.send("not playing anything")
-        if len(player.history) == 0:
-            return await ctx.send("playing history is empty")
-        player.previous(ctx)
-        return await ctx.send("playing previous")
+    ##@commands.hybrid_command(name = "previous", description = "Play the previous song")
+    ##async def previous(self, ctx):
+    ##    player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+    ##    if player is None:
+    ##        return await ctx.send("not playing anything")
+    ##    if len(player.history) == 0:
+    ##        return await ctx.send("playing history is empty")
+    ##    player.previous(ctx)
+    ##    return await ctx.send("playing previous")
     
-    @commands.command()
+    @commands.hybrid_command(name = "pause", description = "pause the playing song")
     async def pause(self, ctx):
         voice_client = ctx.voice_client
         if voice_client is None:
@@ -86,7 +91,7 @@ class Music(commands.Cog):
         else:
             await ctx.send("not playing anything")
     
-    @commands.command()
+    @commands.hybrid_command(name = "resume", description = "resume the paused song")
     async def resume(self, ctx):
         voice_client = ctx.voice_client
         if voice_client is None:
@@ -99,7 +104,7 @@ class Music(commands.Cog):
         else:
             await ctx.send("I ain't playing anything")
     
-    @commands.command()
+    @commands.hybrid_command(name = "stop", description = "Stop the playing song")
     async def stop(self, ctx):
         voice_client = ctx.voice_client
         if voice_client is None:
@@ -109,7 +114,7 @@ class Music(commands.Cog):
         player.queue.clear()
         await ctx.send("stopped, cleared queue")
     
-    @commands.command()
+    @commands.hybrid_command(name = "skip", description = "Skip the playing song")
     async def skip(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
@@ -120,7 +125,7 @@ class Music(commands.Cog):
         voice_client.stop()
         return await ctx.send("skipped")
     
-    @commands.command()
+    @commands.hybrid_command(name = "queue", description = "Show the queue")
     async def queue(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
@@ -138,8 +143,9 @@ class Music(commands.Cog):
         
         await ctx.send(msg)
     
-    @commands.command()
-    async def remove(self, ctx, num):
+    @commands.hybrid_command(name = "remove", description = "remove the song from the queue by using the queue number")
+    @app_commands.describe(num = "The queue number")
+    async def remove(self, ctx, num: str):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
             return await ctx.send("the queue is empty")
@@ -156,7 +162,7 @@ class Music(commands.Cog):
         else:
             return await ctx.send("invalid no.")
     
-    @commands.command()
+    @commands.hybrid_command(name = "history", description = "show playlist history")
     async def history(self, ctx):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
@@ -175,29 +181,31 @@ class Music(commands.Cog):
         
         await ctx.send(msg)
         
-    @commands.command(aliases=["np"])
-    async def nowplaying(self, ctx, msg = True) -> str:
-        player: GuildPlayer = self.__players.get(ctx.guild.id, None)       
-        if player is None:
-            if msg: await ctx.send("not playing anything")
-            return None
-
-        np = await player.nowplaying()
-        if np is None:
-            return await ctx.send("not playing anything")
-        else:
-            return await ctx.send(np)
+    ##@app_commands.command(name = "nowplaying", description = "show the nowplaying song")
+    ##async def nowplaying(self, ctx, msg = True) -> str:
+    ##    player: GuildPlayer = self.__players.get(ctx.guild.id, None)       
+    ##    if player is None:
+    ##        if msg: 
+    ##            await ctx.send("not playing anything")
+    ##        return None
+    ##
+    ##    np = await player.nowplaying()
+    ##    if np is None:
+    ##        return await ctx.send("not playing anything")
+    ##    else:
+    ##        return await ctx.send(np)
         
-    @commands.command()
-    async def volume(self, ctx, *args):
+    @commands.hybrid_command(name = "volume", description = "show the nowplaying song")
+    @app_commands.describe(percentage = "percentage volume (0-100)")
+    async def volume(self, ctx, percentage: str):
         player: GuildPlayer = self.__players.get(ctx.guild.id, None)
         if player is None:
             return await ctx.send("not playing anything")
         volume = player.volume
-        if args == ():
+        if  percentage == ():
             return await ctx.send(f"volume: `{volume}%`")
         else:
-            new_volume = args[0]
+            new_volume =  percentage
             if new_volume.isdigit():
                 if int(new_volume) in range(101):
                     player.volume = int(new_volume)
@@ -208,72 +216,74 @@ class Music(commands.Cog):
             else:
                 return await ctx.send(f"volume has to be an integer between 0 and 100 inclusively")
     
-    @commands.command()
-    async def save(self, ctx, playlistname = None):
-        name = playlistname
-        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
-        if player is None:
-            return await ctx.send("not playing anything")
-        if name is None:
-            return await ctx.send("please provide a name for the playlist")
-        #get urls from np + queue
-        np = player.nowplaying_music[1]
-        np = (np.title, np.url)
-        if len(player.queue) > 0:
-            queue = [(x[1].title, x[1].url) for x in player.queue]
-            queue.insert(0, np)
-            urls = queue
-        else:
-            urls = [np]
+    ##@commands.hybrid_command(name = "save", description = "save your playlist")
+    ##@app_commands.describe(playlistname = "name of the playlist")
+    ##async def save(self, ctx, playlistname:str = None):
+    ##    name = playlistname
+    ##    player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+    ##    if player is None:
+    ##        return await ctx.send("not playing anything")
+    ##    if name is None:
+    ##        return await ctx.send("please provide a name for the playlist")
+    ##    #get urls from np + queue
+    ##    np = player.nowplaying_music[1]
+    ##    np = (np.title, np.url)
+    ##    if len(player.queue) > 0:
+    ##        queue = [(x[1].title, x[1].url) for x in player.queue]
+    ##        queue.insert(0, np)
+    ##        urls = queue
+    ##    else:
+    ##        urls = [np]
+    ##    
+    ##    #read file
+    ##    try:
+    ##        with open(rf"playlist\{ctx.author.id}.json", 'r') as f:
+    ##            d = json.load(f)
+    ##    except:
+    ##        d = {}
+    ##    
+    ##    #return if exists
+    ##    if name in d.keys():
+    ##        return await ctx.send(f"playlist {name} already exists")
+    ##    
+    ##    #else create playlist
+    ##    with open(f"playlist/{ctx.author.id}.json", 'r') as f:
+    ##        d[name] = urls
+    ##        json.dump(d, f, indent=4)
+    ##        return await ctx.send(f"saved playlist as {name}")
         
-        #read file
-        try:
-            with open(f"playlist\{ctx.author.id}.json", 'r') as f:
-                d = json.load(f)
-        except:
-            d = {}
-        
-        #return if exists
-        if name in d.keys():
-            return await ctx.send(f"playlist {name} already exists")
-        
-        #else create playlist
-        with open(f"playlist\{ctx.author.id}.json", 'w+') as f:
-            d[name] = urls
-            json.dump(d, f, indent=4)
-            return await ctx.send(f"saved playlist as {name}")
-        
-    @commands.command()
-    async def playlist(self, ctx, playlistname = None):
-        """
-        add the playlist to queue if specified
-        list all playlists if playlistname is None
-        """
-        with open(f"playlist\{ctx.author.id}.json", 'r') as f:
-            d = json.load(f)
-        
-        name = playlistname
-        if name is None:
-            output = []
-            for name, musics in d.items(): #music = (title, url)
-                titles = [f"    {i}: {music[0]}" for i, music in enumerate(musics, start=1)]
-                output.append(f"{name}:\n{"\n".join(titles)}")
-            return await ctx.send("\n".join(output))
-        #else
-        if name not in d.keys():
-            return await ctx.send(f"cannot find the playlist `{name}`")
-        #else
-        urls = [x[1] for x in d[name]]
-        if await self.__userInVoiceChannel(ctx) is False: return
-        if await self.__botInVoiceChannel(ctx, False) is False:
-            await self.join(ctx)
-        
-        player: GuildPlayer = self.__players.get(ctx.guild.id, None)
-        await player.dlmusic_many(ctx, urls)
-        await ctx.send(f"added playlist `{name}` into queue")
-        
-        if player.nowplaying_music is None:
-            await player.playerLoop(ctx)
+    ##@commands.hybrid_command(name = "playlist", description = "add the playlist to queue if specified, list all playlists if playlistname is None")
+    ##@app_commands.describe(playlistname = "name of the playlist")
+    ##async def playlist(self, ctx, playlistname:str = None):
+    ##    """
+    ##    add the playlist to queue if specified
+    ##    list all playlists if playlistname is None
+    ##    """
+    ##    with open(f"playlist\\{ctx.author.id}.json", 'r') as f:
+    ##        d = json.load(f)
+    ##    
+    ##    name = playlistname
+    ##    if name is None:
+    ##        output = []
+    ##        for name, musics in d.items(): #music = (title, url)
+    ##            titles = [f"    {i}: {music[0]}" for i, music in enumerate(musics, start=1)]
+    ##            output.append(f"{name}:\n{"\n".join(titles)}")
+    ##        return await ctx.send("\n".join(output))
+    ##    #else
+    ##    if name not in d.keys():
+    ##        return await ctx.send(f"cannot find the playlist `{name}`")
+    ##    #else
+    ##    urls = [x[1] for x in d[name]]
+    ##    if await self.__userInVoiceChannel(ctx) is False: return
+    ##    if await self.__botInVoiceChannel(ctx, False) is False:
+    ##        await self.join(ctx)
+    ##    
+    ##    player: GuildPlayer = self.__players.get(ctx.guild.id, None)
+    ##    await player.dlmusic_many(ctx, urls)
+    ##    await ctx.send(f"added playlist `{name}` into queue")
+    ##    
+    ##    if player.nowplaying_music is None:
+    ##        await player.playerLoop(ctx)
         
     
 async def setup(bot):
